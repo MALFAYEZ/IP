@@ -1,0 +1,63 @@
+---
+title: "training data"
+author: "Munerah Alfayez"
+date: "2023-02-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages
+library(caret)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+
+MM <- read.csv("training programs 2021Copy.csv",sep = ",",fileEncoding = "UTF-8")
+```
+
+```{r}
+head (MM)
+
+```
+
+```{r}
+summary(MM)
+```
+all same length , there is no null value 
+
+
+```{r}
+na.omit(MM)
+```
+```{r}
+summary(MM2)
+```
+```{r}
+table(MM$مدفوع.مجاني)
+```
+```{r}
+write.csv(MM2,file = "newmm2.csv",fileEncoding = "UTF-8")
+```
+
+```{r}
+table(MM$مدفوع.مجاني)
+```
+
+```{r}
+ggplot(MM, aes(x = مدفوع.مجاني))+ geom_bar()
+
+```
+```{r}
+write.table(MM2$مدفوع.مجاني , file = "test.text")
+
+```
+
+
