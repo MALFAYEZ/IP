@@ -1,0 +1,84 @@
+---
+title: "Untitled"
+author: "Munerah Alfayez"
+date: "2023-03-02"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+#install.packages
+
+library(ggrepel)
+library(caret)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library("anytime")
+```
+
+```{r}
+df2022 <- read.csv("C:/Users/mnooo/OneDrive/سطح المكتب/work/training programs2022copy.csv",sep = ",",fileEncoding = "UTF-8")
+
+```
+
+```{r}
+head(df2022)
+```
+
+```{r}
+summary(df2022)
+```
+
+```{r}
+#replace null values with median in evaluation 
+df2022 <- df2022 %>% mutate(across(evaluation, ~replace_na(., median(., na.rm=TRUE))))
+
+```
+
+```{r}
+## add month colmn from the start date 
+df2022$month <- format(as.Date(df2022$startdate, format="%d/%m/%Y"),"%m")
+#convert to date 
+df2022$month <- as.Date(anydate(df2022$month),format="%b")
+
+
+```
+
+
+```{r}
+df2022 %>% group_by(month) %>%
+summarise(registered = sum(registered))%>%arrange(., month) -> tt
+```
+
+
+```{r}
+tt %>%
+   tail(12) %>%
+  ggplot( aes(x=month, y=registered)) +
+    geom_line() +
+    geom_point()+
+ theme(panel.grid.minor.x=element_blank(),
+           panel.grid.major.x=element_blank())+
+ theme(panel.grid.minor.y=element_blank(),
+           panel.grid.major.y=element_blank()) +
+    scale_x_date(date_labels = "%b" ,breaks = unique(df2022$month))+
+    scale_y_continuous(labels = function(x)x/1000) +
+   ylim(0, 200000) +
+    xlab("Months") +
+    ylab("student registered")+
+    ggtitle("Number of students registered 2022")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
