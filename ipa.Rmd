@@ -1,0 +1,197 @@
+---
+title: "complete"
+author: "Munerah Alfayez"
+date: "2023-04-12"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+#memory.limit(5000)
+```
+
+```{r}
+#install.packages
+library(readr)
+library(caret)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(ROSE)
+library(randomForest)
+library(C50)
+
+
+
+```
+
+```{r}
+df2022 <- read.csv("C:/Users/mnooo/OneDrive/سطح المكتب/البيانات الجديدة/2022-1 - Copy.csv",sep = ",",fileEncoding = "UTF-8")
+head(df2022)
+summary(df2022)
+```
+
+765407  observations
+
+```{r}
+#Replace "-" with NOT Avaliable
+df2022 <- df2022 %>%
+mutate(trainer_type = replace(trainer_type, trainer_type == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(user_id = replace(user_id, user_id == "-","unavailable"))
+df2022 <- df2022 %>%
+mutate(user_id = replace(user_id, user_id == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(nationality = replace(nationality, user_id == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(age = replace(age, age == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(work_place = replace(work_place, work_place == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(reigon = replace(reigon, reigon == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(level = replace(level, level == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(hierarchy = replace(hierarchy, hierarchy == "-", "unavailable"))
+df2022 <- df2022 %>%
+mutate(gender = replace(gender, gender == "-", "unavailable"))
+
+
+```
+
+
+```{r}
+# percentage of user who enrolled
+enrolled2022 <- length(which(df2022$enrollees==1))
+not_enrolled2022 <- length(which(df2022$enrollees==0))
+x <-  c(enrolled2022, not_enrolled2022)
+labels <-  c("enrolled","not enrolled")
+mycols <- c("turquoise", "royalblue4", "skyblue3", "sienna1")
+piepercent<- round(100*x/sum(x), 1)
+# Plot the chart.
+registerd2022_pie <- pie(x, labels = paste0(piepercent, "%"), main = "Registered Users ",col = mycols )
+legend("topright", c("enrolled","not enrolled") , cex = 0.8,
+fill = mycols)
+enrolees2022pie
+```
+
+```{r}
+#calculate number of users
+tab <- with(df2022, table(enrollees, complete,underprogress), labels.default())
+tab
+
+
+```
+Number of uders who is not enrolled  28618
+Number of users who enrolled and not complete 67858
+Number of users who enrolled and complete 666149
+Number of users who is enrolled and under progress 2782 
+
+
+```{r}
+# percentage of users
+prop.table(tab, 1)*100
+
+```
+
+```{r}
+
+x1 <-  c(666149, 67858, 2782 )
+labels1 <-  c("complete","not complete","underprogress")
+piepercent1<- round(100*x1/sum(x1), 1)
+# Plot the chart.
+enrolees2022_pie <- pie(x1, labels = paste0(piepercent1, "%"), main = "Enrolled Users ", col = mycols )
+legend("topright", c("complete","not complete","underprogress") , cex = 0.8,
+fill = mycols)
+enrolees2022pie
+
+```
+
+```{r}
+#Filter to data to include only enrolled users , and select needed colmns
+
+df2022 %>% filter(enrollees ==1)%>%select(-program_name ,-start_date,-end_date,-program._execution._date,-user_id,-level, -registered , -enrollees , -underprogress , -notcomplete , -work_place) -> df2022e
+
+df2022e 
+```
+736,789 observations for those who enrolled only 
+```{r}
+ndf <- df2022e %>% group_by(age,complete) %>% tally()
+ggplot(ndf,aes(x= age,y=n))+
+  geom_col(aes(fill=factor(complete))) + 
+  scale_fill_manual(values = mycols)+
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  xlab("Age Group")+
+  ylab("Count")+
+  ggtitle("Overview on the Age Group with Completeness")+
+  geom_text(aes(y=n,label = n,group = complete))+
+  theme(text = element_text(size = 10))
+ndf
+
+
+
+
+
+
+
+
+
+```
+
+```{r}
+# Data preprocessing
+
+
+#converting chr to factor
+df2022e <- df2022e %>% mutate_if(is.character, as.factor)
+#converting int to num
+df2022e <- df2022e %>% mutate_if(is.integer, as.numeric)
+
+
+
+```
+```{r}
+levels(working.vector) <- list(yellow = c("yellow", "banana", "canary yellow"), 
+                               blue = c("blue", "aqua"))
+
+```
+
+```{r}
+# training and testing split
+set.seed(100)
+Index <- sample(1:nrow(df2022e),552592)
+training <- df2022e[Index,] #75%
+testing <- df2022e[-Index,] #25%
+
+
+```
+Building a decision tree model
+
+
+```{r}
+model_rpartt <- rpart(complete~.,data = training)
+
+rpart.plot(model_rpartt) ## plot the decision tree
+printcp(model_rpartt) ## complexity values and other detaied result
+
+plotcp(model_rpart) ## plot the cp values VS relatively errors
+```
+
+```{r}
+
+ modelc5  <- C5.0(factor(complete)~.,data = training)
+ plot(c50_model)
+ summary(c50_model)
+ 
+
+```
+
+```{r}
+mod <- randomForest(factor(complete)~.,data = training)
+varImpPlot(mod,main = "Variable Importance Plot")
+
+```
