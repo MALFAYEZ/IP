@@ -195,3 +195,4 @@ mod <- randomForest(factor(complete)~.,data = training)
 varImpPlot(mod,main = "Variable Importance Plot")
 
 ```
+Run out of memory problem
