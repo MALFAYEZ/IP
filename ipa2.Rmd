@@ -1,0 +1,203 @@
+---
+title: "ipa2"
+author: "Munerah Alfayez"
+date: "2023-04-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages
+library(readr)
+library(caret)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(ROSE)
+library(randomForest)
+library(C50)
+library(pROC)
+library(stringr)
+```
+
+```{r}
+paiddata2022 <- read.csv("C:/Users/mnooo/OneDrive/سطح المكتب/البيانات الجديدة/paiddata2022.csv",sep = ",",fileEncoding = "UTF-8")
+
+head(paiddata2022 )
+summary(paiddata2022 )
+```
+There is 88660 observations 
+```{r}
+# percentage of user who enrolled
+enrolled2022 <- length(which(paiddata2022$enrollees==1))
+not_enrolled2022 <- length(which(paiddata2022$enrollees==0))
+x <-  c(enrolled2022, not_enrolled2022)
+labels <-  c("enrolled","not enrolled")
+mycols <- c("turquoise", "royalblue4", "skyblue3", "sienna1")
+piepercent<- round(100*x/sum(x), 1)
+# Plot the chart.
+registerd2022_pie <- pie(x, labels = paste0(piepercent, "%"), main = "Registered Users ",col = mycols )
+legend("topright", c("enrolled","not enrolled") , cex = 0.8,
+fill = mycols)
+
+```
+
+```{r}
+#calculate number of users
+tab <- with(paiddata2022, table(enrollees, complete,underprogress), labels.default())
+tab
+
+```
+Number of uders who is not enrolled 484
+Number of users who enrolled and not complete 440
+Number of users who enrolled and complete  85058
+Number of users who is enrolled and under progress 2678 
+```{r}
+# percentage of users
+prop.table(tab, 1)*100
+
+```
+ 
+```{r}
+x1 <-  c(85058, 440, 2678 )
+labels1 <-  c("complete","not complete","underprogress")
+piepercent1<- round(100*x1/sum(x1), 1)
+# Plot the chart.
+enrolees2022_pie <- pie(x1, labels = paste0(piepercent1, "%"), main = "Enrolled Users ", col = mycols )
+legend("topright", c("complete","not complete","underprogress") , cex = 0.8,
+fill = mycols)
+
+```
+
+```{r}
+#Filter to data to include only enrolled users , and select needed colmns
+paiddata2022 %>% filter(enrollees ==1)%>%select(-program_name ,-start_date,-end_date,-program._execution._date,-user_id,-level, -registered , -enrollees , -underprogress , -notcomplete , -work_place,-paid.free)%>% mutate(hierarchy=str_wrap(hierarchy,42)) -> paiddata2022e
+paiddata2022e
+
+
+```
+88,176 observations for those who enrolled only 
+```{r}
+ndf <- paiddata2022e %>% group_by(age,complete) %>% tally()
+ggplot(ndf,aes(x= age,y=n))+
+  geom_col(aes(fill=factor(complete))) + 
+  scale_fill_manual(values = mycols)+
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  xlab("Age Group")+
+  ylab("Count")+
+  ggtitle("Overview on the Age Group with Completeness")+
+  geom_text(aes(y=n,label = n,group = complete))+
+  theme(text = element_text(size = 10))
+ndf
+
+```
+```{r}
+ndf1 <- paiddata2022e %>% group_by(reigon,complete) %>% tally()%>% group_by(reigon)%>%mutate(group_size = sum(n),prop =round( n/group_size,2))
+textdf<-ndf1 %>% filter(complete==1)
+ggplot(ndf1,aes(x= reigon,y=n))+
+  geom_col(aes(fill=factor(complete))) + 
+  scale_fill_manual(values = mycols)+
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  xlab("reigon groups")+
+  ylab("Count")+
+  ggtitle("Overview on the reigon  with Completeness")+
+  #geom_text(aes(y=n ,label = prop,group = complete))+
+  annotate("text",x=textdf$reigon ,y=textdf$n+2000,label=textdf$prop,color="black")+
+  theme(text = element_text(size = 10))
+ndf1
+```
+
+```{r}
+# Data preprocessing
+#converting chr to factor
+paiddata2022e <- paiddata2022e %>% mutate_if(is.character, as.factor)
+#converting int to num
+paiddata2022e <- paiddata2022e %>% mutate_if(is.integer, as.numeric)
+```
+
+```{r}
+
+```
+
+```{r}
+# training and testing split
+set.seed(100)
+Index <- sample(1:nrow(paiddata2022e),66132)
+training <- paiddata2022e[Index,] #75%
+testing <- paiddata2022e[-Index,] #25%
+```
+
+```{r}
+model_rpartt <- rpart(complete~.,data = training)
+rpart.plot(model_rpartt) ## plot the decision tree
+prp(model_rpartt)
+printcp(model_rpartt) ## complexity values and other detaied result
+plotcp(model_rpartt) ## plot the cp values VS relatively errors
+
+```
+
+```{r}
+ #using cp = 0.017 which has less error 
+model_rpartt_manual <- rpart(complete~., 
+                     data = training, 
+                    control =rpart.control(cp = 0.017))
+  
+model_rpartt_manual
+
+
+```
+
+
+
+```{r}
+#modelc5 <- C5.0(factor(complete)~.,data = training)
+#plot(modelc5)
+#summary(modelc5)
+```
+
+```{r}
+
+mod <- randomForest(factor(complete)~.,data = training)
+varImpPlot(mod,main = "Variable Importance Plot")
+
+```
+```{r}
+
+# predict Rpart 
+
+pred_rpart <- predict(model_rpartt,newdata = testing)
+#pred_rpart<-floor(pred_rpart+0.5)
+jpeg("54.jpg")
+roc.curve(as.factor(pred_rpart),testing$complete)
+
+```
+```{r}
+# predict random forest
+pred_rf <- predict(mod,newdata = testing)
+#pred_rf<-floor(pred_rf+0.5)
+roc.curve(as.factor(pred_rf),testing$complete)
+
+
+```
+
+```{r}
+
+
+
+
+```
+
+```{r}
+
+
+
+
+```
