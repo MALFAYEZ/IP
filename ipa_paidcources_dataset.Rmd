@@ -188,16 +188,6 @@ roc.curve(as.factor(pred_rf),testing$complete)
 
 ```
 
-```{r}
 
 
 
-
-```
-
-```{r}
-
-
-
-
-```
