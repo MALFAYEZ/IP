@@ -1,0 +1,143 @@
+---
+title: "ipa3"
+author: "Munerah Alfayez"
+date: "2023-05-05"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages
+library(readr)
+library(caret)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(ROSE)
+library(randomForest)
+library(C50)
+library(pROC)
+library(stringr)
+```
+
+```{r}
+df2022 <- read.csv("C:/Users/mnooo/OneDrive/سطح المكتب/البيانات الجديدة/2022-1 - Copy.csv",sep = ",",fileEncoding = "UTF-8")
+head(df2022)
+summary(df2022)
+```
+
+```{r}
+ 
+df_rand <- df[sample(nrow(df2022), size=153081), ]
+```
+
+
+
+```{r}
+
+
+head(df_rand )
+summary(df_rand)
+```
+
+```{r}
+#Replace "-" with NOT Avaliable
+df_rand <- df_rand %>%
+mutate(trainer_type = replace(trainer_type, trainer_type == "-", "unavailable"))
+df_rand<- df_rand %>%
+mutate(user_id = replace(user_id, user_id == "-","unavailable"))
+df_rand <- df_rand %>%
+mutate(user_id = replace(user_id, user_id == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(nationality = replace(nationality, user_id == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(age = replace(age, age == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(work_place = replace(work_place, work_place == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(reigon = replace(reigon, reigon == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(level = replace(level, level == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(hierarchy = replace(hierarchy, hierarchy == "-", "unavailable"))
+df_rand <- df_rand %>%
+mutate(gender = replace(gender, gender == "-", "unavailable"))
+
+
+```
+
+```{r}
+#Filter to data to include only enrolled users , and select needed colmns
+df_rand %>% filter(enrollees ==1)%>%select(-program_name ,-start_date,-end_date,-program._execution._date,-user_id,-level, -registered , -enrollees , -underprogress , -notcomplete , -work_place,-paid.free)%>% mutate(hierarchy=str_wrap(hierarchy,42)) -> df_rande
+df_rande
+
+
+```
+[147,418 for those who enrolled only 
+```{r}
+# Data preprocessing
+#converting chr to factor
+df_rande <- df_rande %>% mutate_if(is.character, as.factor)
+#converting int to num
+df_rande<- df_rande %>% mutate_if(is.integer, as.numeric)
+```
+
+```{r}
+# training and testing split
+set.seed(100)
+Index <- sample(1:nrow(df_rande),110564)
+training <- df_rande[Index,] #75%
+testing <- df_rande[-Index,] #25%
+```
+
+```{r}
+model_rpartt <- rpart(complete~.,data = training)
+rpart.plot(model_rpartt) ## plot the decision tree
+prp(model_rpartt)
+printcp(model_rpartt) ## complexity values and other detaied result
+plotcp(model_rpartt) ## plot the cp values VS relatively errors
+
+
+```
+```{r}
+ #using cp = 0.013 which has less error 
+model_rpartt_manual <- rpart(complete~., 
+                     data = training, 
+                    control =rpart.control(cp = 0.013))
+  
+model_rpartt_manual
+
+
+```
+
+
+```{r}
+
+rfmodel <- randomForest(factor(complete)~.,data = training)
+varImpPlot(rfmodel,main = "Variable Importance Plot")
+
+```
+```{r}
+# predict Rpart 
+
+pred_rpart <- predict(model_rpartt,newdata = testing)
+#pred_rpart<-floor(pred_rpart+0.5)
+roc.curve(as.factor(pred_rpart),testing$complete)
+
+
+```
+
+```{r}
+# predict random forest
+pred_rf <- predict(rfmodel ,newdata = testing)
+#pred_rf<-floor(pred_rf+0.5)
+roc.curve(as.factor(pred_rf ),testing$complete)
+
+```
